@@ -57,6 +57,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define LPWM_1_TIM2_CH3_Pin GPIO_PIN_2
+#define LPWM_1_TIM2_CH3_GPIO_Port GPIOA
+#define RPWM_1_TIME2_CH4_Pin GPIO_PIN_3
+#define RPWM_1_TIME2_CH4_GPIO_Port GPIOA
+#define C2_encoder_TIM1_CH1_Pin GPIO_PIN_8
+#define C2_encoder_TIM1_CH1_GPIO_Port GPIOA
+#define C1_encoder_TIM1_CH2_Pin GPIO_PIN_9
+#define C1_encoder_TIM1_CH2_GPIO_Port GPIOA
+#define R_L_EN_MOTOR_1_gpio_output_Pin GPIO_PIN_6
+#define R_L_EN_MOTOR_1_gpio_output_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

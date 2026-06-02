@@ -60,29 +60,30 @@
   Thong so banh + encoder
 */
 #define WHEEL_DIAMETER_M      0.100f  // 100 mm = 0.100 m
-#define ENCODER_PPR           11.0f   // so xung encoder moi vong truc motor
-#define GEAR_RATIO            90.0f   // ti so hop so, vi du 1:90
+#define ENCODER_PPR           11.0f   // so xung encoder moi vong truc motor ( xem trong data sheet)
+#define GEAR_RATIO            30.0f   // ti so hop so, vi du 1:30
 #define ENCODER_MULTIPLIER    4.0f    // encoder mode x4
 
 #define PI_VALUE              3.1415926f
 
-#define WHEEL_CIRCUMFERENCE_M (PI_VALUE * WHEEL_DIAMETER_M)
-#define COUNTS_PER_WHEEL_REV  (ENCODER_PPR * ENCODER_MULTIPLIER * GEAR_RATIO)
-#define METER_PER_COUNT       (WHEEL_CIRCUMFERENCE_M / COUNTS_PER_WHEEL_REV)
+#define WHEEL_CIRCUMFERENCE_M (PI_VALUE * WHEEL_DIAMETER_M)   // tinh chuvi banh xe  cv = pi * dkinh banh
+#define ENCODER_PER_REV_OF_WHEEEL  (ENCODER_PPR * ENCODER_MULTIPLIER * GEAR_RATIO) //số count encoder đếm được khi bánh xe quay đúng 1 vòng.
+#define METER_PER_COUNT_OF_ENCODER       (WHEEL_CIRCUMFERENCE_M / ENCODER_PER_REV_OF_WHEEEL) //quãng đường xe đi được ứng với 1 count encoder.
 
 /*
   Toc do max ly thuyet:
   111 rpm, banh 100 mm => ~0.581 m/s
+
 */
-#define MOTOR_MAX_SPEED_MPS   ((MOTOR_MAX_RPM / 60.0f) * WHEEL_CIRCUMFERENCE_M)
+#define MOTOR_MAX_SPEED_MPS   ((MOTOR_MAX_RPM / 60.0f) * WHEEL_CIRCUMFERENCE_M)  //tốc độ = số vòng mỗi giây * chu vi bánh xe
 
 /*
   Chu ky PID
 */
-#define PID_SAMPLE_TIME_MS    10
-#define PID_SAMPLE_TIME_S     ((float)PID_SAMPLE_TIME_MS / 1000.0f)
+#define PID_SAMPLE_TIME_MS    10           //PID được tính mỗi 10 mili giây.
+#define PID_SAMPLE_TIME_S     ((float)PID_SAMPLE_TIME_MS / 1000.0f)  // doi sang giay
 
-#define SPEED_DEADBAND_MPS    0.005f
+#define SPEED_DEADBAND_MPS    0.005f      //// Ngưỡng bỏ qua sai số tốc độ nhỏ, giúp motor không rung, 0.005 m/s
 
 /* =========================
    BIEN DIEU KHIEN MOTOR
@@ -136,7 +137,7 @@ void SystemClock_Config(void);
 
 void Motor_Init(void);
 void Motor_SetPWM(int pwm);
-void Motor_SetDirectionPWM(int direction, int pwm);
+void Set_Direction_and_PWM(int direction, int pwm);
 void Motor_Stop(void);
 
 int Encoder_GetDelta(void);
@@ -162,14 +163,14 @@ int SpeedToTargetPWM(float speed_mps);
 void Motor_Init(void)
 {
   // Bat encoder TIM1
-  HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);
+  HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);  // Bat 2 chan encoder c1,c2 cua motor
 
-  // Bat PWM TIM2 CH3 va CH4
+  // Bat hai chan rPWM v LPWM cua TIM2, CH3 va CH4 ( huong nang: quyet dinh huong quay)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3); // PA2 - LPWM
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4); // PA3 - RPWM
 
   // Enable driver motor
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET); // R_EN + L_EN
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET); // R_EN + L_EN, xuất mức HIGH ra chân PB6 để bật driver motor.
 
   // PWM ban dau = 0
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 0);
@@ -231,7 +232,7 @@ void Motor_SetPWM(int pwm)
    direction = MOTOR_FORWARD / MOTOR_BACKWARD / MOTOR_STOP
    ========================================================= */
 
-void Motor_SetDirectionPWM(int direction, int pwm)
+void Set_Direction_and_PWM(int direction, int pwm)
 {
   if (pwm < 0)
     pwm = -pwm;
@@ -239,11 +240,11 @@ void Motor_SetDirectionPWM(int direction, int pwm)
   if (pwm > PWM_MAX)
     pwm = PWM_MAX;
 
-  if (direction == MOTOR_FORWARD)
+  if (direction == MOTOR_FORWARD) // FORWARD = 1
   {
     Motor_SetPWM(pwm);
   }
-  else if (direction == MOTOR_BACKWARD)
+  else if (direction == MOTOR_BACKWARD) // BACKWARD = -1
   {
     Motor_SetPWM(-pwm);
   }
@@ -295,8 +296,8 @@ int Encoder_GetDelta(void)
 
 float Encoder_DeltaToMPS(int delta)
 {
-  float distance_m = (float)delta * METER_PER_COUNT;
-  float speed_mps = distance_m / PID_SAMPLE_TIME_S;
+  float distance_m = (float)delta * METER_PER_COUNT_OF_ENCODER;
+  float speed_mps = distance_m / PID_SAMPLE_TIME_S;  //tính tốc độ
 
   return speed_mps;
 }
@@ -518,14 +519,13 @@ int main(void)
     Max ly thuyet ~0.581 m/s.
     Nen 0.30 m/s la hop ly.
   */
-  Motor_SetSpeedMPS(0.3f);
+  Motor_SetSpeedMPS(0.1f);
 
   uint32_t last_pid_time = 0;
   uint32_t last_debug_time = 0;
 
   /* USER CODE END 2 */
 
-  /* Infinite loop */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -556,10 +556,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
-  }
-  /* USER CODE END 3 */
-
-
+}
 
 /**
   * @brief System Clock Configuration
